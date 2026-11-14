@@ -1,0 +1,18 @@
+# Redirige el proyecto completo hacia /public cuando XAMPP sirve htdocs.
+# Si usas un VirtualHost con DocumentRoot en AppMenu/public, este archivo no se usa.
+Options -Indexes
+DirectoryIndex public/index.html
+
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Evita reescribir si la URL ya apunta a /public.
+    RewriteCond %{REQUEST_URI} !/public/
+    RewriteRule ^$ public/ [L]
+    RewriteCond %{REQUEST_URI} !/public/
+    RewriteRule ^(.*)$ public/$1 [L,QSA]
+</IfModule>
+
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>

@@ -1,0 +1,8 @@
+.env
+storage/logs/*
+storage/tmp/*
+storage/rate/*
+public/uploads/products/*
+public/uploads/branding/*
+!public/uploads/products/.gitkeep
+!public/uploads/branding/.gitkeep

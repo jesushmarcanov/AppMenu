@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="dark">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#0b0a09">
+    <meta name="description" content="Menú digital: carta, precios, horarios, reservas y pedidos por WhatsApp.">
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="Menú digital">
+    <meta property="og:title" content="Menú digital">
+    <meta property="og:description" content="Consulta la carta, reserva una mesa y pide por WhatsApp.">
+    <meta property="og:image" content="">
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:title" content="Menú digital">
+    <meta name="twitter:description" content="Consulta la carta, reserva una mesa y pide por WhatsApp.">
+    <meta name="twitter:image" content="">
+    <title>Menú digital</title>
+    <script src="assets/js/core/theme.js"></script>
+    <link rel="stylesheet" href="assets/css/base.css">
+    <link rel="stylesheet" href="assets/css/public.css">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Ccircle cx='32' cy='32' r='30' fill='%230b0a09' stroke='%23c9a227'/%3E%3Ctext x='32' y='43' font-family='Georgia' font-size='28' fill='%23e4c766' text-anchor='middle'%3EM%3C/text%3E%3C/svg%3E">
+</head>
+<body>
+<a class="skip-link" href="#menu" data-i18n="common.skip">Saltar al menú</a>
+
+<header class="site-header" id="site-header">
+    <div class="container header-inner">
+        <a class="brand" href="#top" aria-label="Inicio">
+            <span class="brand-mark" id="brand-mark">M</span>
+            <span class="brand-text">
+                <span class="brand-name" id="brand-name">Menú digital</span>
+                <span class="brand-tagline" id="brand-tagline">Carta y reservas</span>
+            </span>
+        </a>
+
+        <nav class="site-nav" id="site-nav" aria-label="Navegación principal">
+            <a href="#menu" data-nav="menu" data-i18n="nav.menu">Menú</a>
+            <a href="#featured" data-nav="featured" data-i18n="nav.featured">Especiales</a>
+            <a href="#reservations" data-nav="reservations" data-i18n="nav.reservations">Reservas</a>
+            <a href="#contact" data-nav="contact" data-i18n="nav.contact">Contacto</a>
+        </nav>
+
+        <div class="header-actions">
+            <div class="lang-switch" role="group" aria-label="Idioma">
+                <button type="button" data-lang="es" class="is-active" aria-pressed="true">ES</button>
+                <button type="button" data-lang="en" aria-pressed="false">EN</button>
+            </div>
+            <button class="theme-toggle" type="button" data-theme-toggle aria-label="Cambiar tema" title="Cambiar tema">
+                <svg class="theme-icon-sun" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41"/></svg>
+                <svg class="theme-icon-moon" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>
+            </button>
+            <button class="cart-button" id="cart-button" type="button" aria-label="Abrir pedido">
+                <svg width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+                <span class="cart-count" id="cart-count" data-count="0"></span>
+            </button>
+            <button class="nav-toggle" id="nav-toggle" type="button" aria-label="Abrir navegación" aria-expanded="false" aria-controls="site-nav">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg>
+            </button>
+        </div>
+    </div>
+</header>
+
+<main id="top">
+    <section class="hero" id="hero" aria-labelledby="hero-title">
+        <div class="hero-bg-image" id="hero-bg" aria-hidden="true"></div>
+        <div class="container hero-grid">
+            <div class="hero-copy">
+                <p class="eyebrow" id="hero-eyebrow">Carta digital</p>
+                <h1 id="hero-title">Tu <em>menú</em></h1>
+                <p class="hero-tagline" id="hero-tagline"></p>
+                <p class="hero-description" id="hero-description"></p>
+                <div class="hero-actions">
+                    <a class="btn btn-primary" href="#menu" id="cta-menu">
+                        <span data-i18n="hero.viewMenu">Ver el menú</span>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12h14M13 6l6 6-6 6"/></svg>
+                    </a>
+                    <a class="btn btn-outline" href="#reservations" id="cta-reserve" data-i18n="hero.reserve">Reservar mesa</a>
+                </div>
+                <div class="hero-facts" id="hero-facts"></div>
+            </div>
+
+            <div class="hero-visual" aria-hidden="true">
+                <div class="plate" id="hero-plate">
+                    <span class="plate-emoji" id="hero-emoji">🍽️</span>
+                    <span class="plate-caption" id="hero-caption"><strong>Selección de la casa</strong>Ingredientes de temporada</span>
+                </div>
+                <div class="float-card is-top">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    <div><strong id="float-hours">12:00 – 22:00</strong><span id="float-hours-label" data-i18n="hero.today">Horario de hoy</span></div>
+                </div>
+                <div class="float-card is-bottom">
+                    <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg>
+                    <div><strong id="float-reservation" data-i18n="hero.reserve">Reserva tu mesa</strong><span id="float-reservation-label" data-i18n="hero.confirmation">Confirmación personal</span></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <div class="menu-toolbar" aria-label="Filtros del menú">
+        <div class="container toolbar-inner">
+            <span class="toolbar-label" data-i18n="menu.explore">Explora</span>
+            <div class="category-pills" id="category-pills" role="group" aria-label="Categorías"></div>
+        </div>
+    </div>
+
+    <section class="featured-section" id="featured" aria-labelledby="featured-title">
+        <div class="container">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow" data-i18n="featured.eyebrow">Selección de la casa</p>
+                    <h2 id="featured-title" data-i18n="featured.title">Los imprescindibles</h2>
+                </div>
+                <p class="muted small" id="featured-note" data-i18n="featured.note">Platos que nuestros comensales vuelven a pedir.</p>
+            </div>
+            <div class="featured-rail" id="featured-rail"></div>
+        </div>
+    </section>
+
+    <section class="menu-section section" id="menu" aria-labelledby="menu-title">
+        <div class="container">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow" data-i18n="menu.eyebrow">La carta</p>
+                    <h2 id="menu-title" data-i18n="menu.title">Nuestro menú</h2>
+                    <p class="menu-subtitle" id="menu-subtitle" data-i18n="menu.subtitle">Cocina de mercado, preparada al momento.</p>
+                </div>
+                <div class="menu-head-tools">
+                    <label class="search-box input-group">
+                        <span class="visually-hidden" data-i18n="menu.searchLabel">Buscar en el menú</span>
+                        <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+                        <input class="input" type="search" id="menu-search" placeholder="Buscar un plato…" autocomplete="off">
+                    </label>
+                </div>
+            </div>
+            <div id="menu-content" aria-live="polite">
+                <div class="product-grid">
+                    <div class="skeleton" style="height:340px"></div>
+                    <div class="skeleton" style="height:340px"></div>
+                    <div class="skeleton" style="height:340px"></div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="reservation-section section" id="reservations" aria-labelledby="reservation-title">
+        <div class="container reservation-grid">
+            <div class="reservation-copy">
+                <p class="eyebrow" data-i18n="reservation.eyebrow">Reservas</p>
+                <h2 id="reservation-title" data-i18n="reservation.title">Una mesa para compartir</h2>
+                <p id="reservation-intro" data-i18n="reservation.intro">Cuéntanos cuándo quieres venir y prepararemos todo para recibirte. Confirmaremos tu reserva personalmente.</p>
+
+                <div class="reservation-points">
+                    <div class="reservation-point">
+                        <span class="reservation-point-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                        </span>
+                        <div>
+                            <strong id="reservation-hours-title" data-i18n="reservation.hours">Horario</strong>
+                            <span class="hours-list" id="reservation-hours"></span>
+                        </div>
+                    </div>
+                    <div class="reservation-point">
+                        <span class="reservation-point-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s7-5.2 7-12a7 7 0 1 0-14 0c0 6.8 7 12 7 12Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                        </span>
+                        <div>
+                            <strong id="reservation-address-title" data-i18n="reservation.where">Dónde estamos</strong>
+                            <span id="reservation-address">Calle 45 #12-34, Ciudad</span>
+                        </div>
+                    </div>
+                    <div class="reservation-point">
+                        <span class="reservation-point-icon">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 12a8 8 0 1 1-3.1-6.3"/><path d="M20 4v5h-5"/></svg>
+                        </span>
+                        <div>
+                            <strong id="reservation-note-title" data-i18n="reservation.noteTitle">Buena mesa, mejor compañía</strong>
+                            <span id="reservation-note">Para grupos grandes, escríbenos directamente.</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="reservation-card">
+                <div id="reservation-form-wrap">
+                    <h3 id="reservation-form-title" data-i18n="reservation.formTitle">Reserva tu mesa</h3>
+                    <p id="reservation-form-subtitle" data-i18n="reservation.formSubtitle">Completa los datos y te confirmamos.</p>
+                    <form id="reservation-form" novalidate>
+                        <div class="form-grid">
+                            <div class="field span-2">
+                                <label for="res-name" data-i18n="form.name">Nombre completo</label>
+                                <input class="input" id="res-name" name="name" type="text" autocomplete="name" maxlength="120" required placeholder="Tu nombre">
+                                <span class="field-error" data-error-for="name"></span>
+                            </div>
+                            <div class="field">
+                                <label for="res-phone" data-i18n="form.phone">Teléfono</label>
+                                <input class="input" id="res-phone" name="phone" type="tel" autocomplete="tel" maxlength="30" required placeholder="+58 412 000 0000">
+                                <span class="field-error" data-error-for="phone"></span>
+                            </div>
+                            <div class="field">
+                                <label for="res-email" data-i18n="form.email">Correo (opcional)</label>
+                                <input class="input" id="res-email" name="email" type="email" autocomplete="email" maxlength="190" placeholder="tu@correo.com">
+                                <span class="field-error" data-error-for="email"></span>
+                            </div>
+                            <div class="field">
+                                <label for="res-date" data-i18n="form.date">Fecha</label>
+                                <input class="input" id="res-date" name="reservation_date" type="date" required>
+                                <span class="field-error" data-error-for="reservation_date"></span>
+                            </div>
+                            <div class="field">
+                                <label for="res-time" data-i18n="form.time">Hora</label>
+                                <select class="select" id="res-time" name="reservation_time" required>
+                                    <option value="">Selecciona una hora</option>
+                                </select>
+                                <span class="field-error" data-error-for="reservation_time"></span>
+                            </div>
+                            <div class="field">
+                                <label for="res-party" data-i18n="form.party">Personas</label>
+                                <select class="select" id="res-party" name="party_size" required></select>
+                                <span class="field-error" data-error-for="party_size"></span>
+                            </div>
+                            <div class="field">
+                                <label for="res-notes" data-i18n="form.notes">Notas (opcional)</label>
+                                <input class="input" id="res-notes" name="notes" type="text" maxlength="180" placeholder="Alergias, celebración…">
+                                <span class="field-error" data-error-for="notes"></span>
+                            </div>
+                            <div class="field span-2">
+                                <label for="res-notes-long" class="visually-hidden">Comentarios</label>
+                                <textarea class="textarea" id="res-notes-long" name="details" maxlength="1000" rows="3" placeholder="¿Algo que debamos saber? (opcional)"></textarea>
+                            </div>
+                        </div>
+                        <input class="honeypot" type="text" name="website" tabindex="-1" autocomplete="off" aria-hidden="true">
+                        <button class="btn btn-primary" type="submit" id="reservation-submit" data-i18n="reservation.submit" style="width:100%;margin-top:18px">
+                            Solicitar reserva
+                        </button>
+                        <p class="small muted" id="reservation-legal" data-i18n="reservation.legal" style="margin-top:10px;text-align:center">Te contactaremos para confirmar. Sin cargos anticipados.</p>
+                    </form>
+                </div>
+
+                <div class="reservation-success" id="reservation-success" hidden>
+                    <span class="reservation-success-icon">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m5 12 4 4L19 6"/></svg>
+                    </span>
+                    <h3 data-i18n="reservation.successTitle">Solicitud recibida</h3>
+                    <p id="reservation-success-text" data-i18n="reservation.successText">Gracias. Te contactaremos para confirmar tu mesa.</p>
+                    <button class="btn btn-outline btn-sm" type="button" id="reservation-again" data-i18n="reservation.again">Hacer otra reserva</button>
+                </div>
+
+                <div class="reservation-success" id="reservation-unavailable" hidden>
+                    <span class="reservation-success-icon">
+                        <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>
+                    </span>
+                    <h3 data-i18n="reservation.closedTitle">Reservas en pausa</h3>
+                    <p data-i18n="reservation.closed">Escríbenos por WhatsApp y te ayudamos a reservar.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="contact-section section" id="contact" aria-labelledby="contact-title">
+        <div class="container">
+            <div class="section-head">
+                <div>
+                    <p class="eyebrow" data-i18n="contact.eyebrow">Visítanos</p>
+                    <h2 id="contact-title" data-i18n="contact.title">Nos encantará verte</h2>
+                </div>
+                <p class="muted small" id="contact-note" data-i18n="contact.note">Estamos a un mensaje de distancia.</p>
+            </div>
+
+            <div class="contact-grid">
+                <div class="contact-card contact-main">
+                    <div class="contact-block">
+                        <h3 data-i18n="contact.contactTitle">Contacto</h3>
+                        <div class="contact-list" id="contact-list"></div>
+                        <div class="social-row" id="social-row"></div>
+                    </div>
+                    <div class="contact-block">
+                        <h3 data-i18n="contact.hoursTitle">Horario</h3>
+                        <div class="hours-list" id="contact-hours"></div>
+                        <a class="btn btn-outline btn-sm" href="#reservations" data-i18n="contact.book" style="margin-top:18px">Reservar una mesa</a>
+                    </div>
+                </div>
+
+                <div class="contact-card map-card">
+                    <span class="map-pin" aria-hidden="true">
+                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12S4 16 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                    </span>
+                    <div>
+                        <h3 data-i18n="contact.mapTitle">Encuéntranos</h3>
+                        <p id="map-address">Calle 45 #12-34, Ciudad</p>
+                        <a class="btn btn-outline btn-sm" id="maps-link" href="#" data-i18n="contact.openMap" target="_blank" rel="noopener noreferrer">Abrir en mapas</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-grid">
+            <div>
+                <a class="brand" href="#top">
+                    <span class="brand-mark" id="footer-brand-mark">M</span>
+                    <span class="brand-text">
+                        <span class="brand-name" id="footer-brand-name">Menú digital</span>
+                        <span class="brand-tagline" id="footer-brand-tagline">Carta y reservas</span>
+                    </span>
+                </a>
+                <p class="footer-note" id="footer-note"></p>
+            </div>
+            <div class="footer-links">
+                <div class="footer-col">
+                    <strong data-i18n="footer.menu">Menú</strong>
+                    <a href="#menu" data-i18n="footer.menuLink">La carta</a>
+                    <a href="#featured" data-i18n="footer.specials">Especiales</a>
+                    <a href="#reservations" data-i18n="footer.reservations">Reservas</a>
+                </div>
+                <div class="footer-col">
+                    <strong data-i18n="footer.contact">Contacto</strong>
+                    <a id="footer-phone" href="tel:" data-i18n="footer.phone">Teléfono</a>
+                    <a id="footer-whatsapp" href="#">WhatsApp</a>
+                    <a id="footer-email" href="mailto:" data-i18n="footer.email">Correo</a>
+                </div>
+                <div class="footer-col">
+                    <strong data-i18n="footer.follow">Síguenos</strong>
+                    <a id="footer-instagram" href="#" target="_blank" rel="noopener noreferrer">Instagram</a>
+                    <a id="footer-facebook" href="#" target="_blank" rel="noopener noreferrer">Facebook</a>
+                </div>
+            </div>
+        </div>
+        <div class="footer-bottom">
+            <span id="footer-copy">© <span id="footer-year"></span></span>
+            <span><span data-i18n="footer.digital">Menú digital</span> · <a href="admin/" data-i18n="footer.admin">Panel de administración</a></span>
+        </div>
+    </div>
+</footer>
+
+<button class="cart-fab" id="cart-fab" type="button" aria-label="Abrir pedido">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z"/><path d="M3 6h18"/><path d="M16 10a4 4 0 0 1-8 0"/></svg>
+    <span id="cart-fab-label" data-i18n="cart.fab">Pedido</span>
+    <span class="cart-count" id="cart-count-mobile" data-count="0"></span>
+</button>
+
+<div id="cart-root"></div>
+<div id="modal-root"></div>
+<div class="toast-stack" id="toast-stack" aria-live="polite" aria-atomic="false"></div>
+
+<noscript>
+    <div style="padding:24px;text-align:center;background:#141210;color:#f5efe6">
+        Activa JavaScript para ver el menú interactivo y hacer pedidos.
+    </div>
+</noscript>
+
+<script type="module" src="assets/js/menu/app.js"></script>
+</body>
+</html>
