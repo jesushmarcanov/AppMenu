@@ -40,12 +40,15 @@ ni Composer, frontend HTML/CSS/JavaScript sin dependencias y base de datos MySQL
 - Código QR del menú en PNG/SVG, descarga e impresión.
 - Configuración de marca, moneda, horarios, reservas, pedidos, Telegram y URL pública.
 - Usuarios, roles y auditoría de acciones (solo administradores).
+- Verificación en dos pasos (TOTP) para administradores, con códigos de recuperación.
 
 ### Seguridad
 - Sesiones PHP con cookies `HttpOnly`, `SameSite=Lax` y regeneración de ID.
 - CSRF por token en todas las escrituras.
-- Límite de intentos en login, reservas y API pública.
+- Límite de intentos en login, 2FA, reservas y API pública.
 - Contraseñas con `password_hash` (bcrypt) y cambio forzado.
+- 2FA TOTP (RFC 6238) sin dependencias externas, con secreto cifrado mediante
+  AES-256-GCM (`APP_KEY`) y códigos de recuperación de un solo uso.
 - Validación de subidas por MIME real, tamaño y dimensiones.
 - Cabeceras CSP, `X-Frame-Options`, `nosniff` y `Referrer-Policy`.
 - Registro de auditoría sin datos sensibles.
@@ -110,6 +113,14 @@ AppMenu/
    Ajusta `DB_*` si tu MySQL usa otra contraseña. En XAMPP lo habitual es
    `root` sin contraseña y base `appmenu`.
 
+   Genera también una `APP_KEY` (necesaria para la verificación en dos pasos):
+
+   ```bash
+   php -r "echo 'base64:'.base64_encode(random_bytes(32)), PHP_EOL;"
+   ```
+
+   Copia el valor en `APP_KEY=` dentro de `.env`.
+
 3. Crea la base de datos y las tablas:
 
    ```bash
@@ -161,6 +172,7 @@ usarse en local.
 | Productos e imágenes | ✅ | ✅ |
 | Código QR | ✅ | ✅ |
 | Configuración | — | ✅ |
+| Seguridad (2FA) | — | ✅ |
 | Usuarios | — | ✅ |
 | Auditoría | — | ✅ |
 
@@ -190,6 +202,9 @@ la interfaz solo oculta las secciones no permitidas.
   la IPv4 de la red local para que el teléfono pueda abrirlo. Para producción define
   `APP_URL` o el enlace público en Configuración.
 - **Moneda**: código, símbolo, configuración regional y decimales son configurables.
+- **Seguridad (2FA)**: en Sistema → Seguridad cada administrador puede activar TOTP
+  escaneando el QR con Google Authenticator, Authy o similar. Guarda los códigos de
+  recuperación mostrados una sola vez. Requiere `APP_KEY` en `.env`.
 
 ## Pruebas y verificación
 

@@ -42,9 +42,9 @@
         </button>
         <div class="auth-card">
             <header class="auth-head">
-                <p class="eyebrow">Administración</p>
-                <h2>Inicia sesión</h2>
-                <p class="muted small">Gestiona la carta, las reservas y la configuración de tu restaurante.</p>
+                <p class="eyebrow" id="login-eyebrow">Administración</p>
+                <h2 id="login-title">Inicia sesión</h2>
+                <p class="muted small" id="login-intro">Gestiona la carta, las reservas y la configuración de tu restaurante.</p>
             </header>
             <form id="login-form" class="stack" novalidate>
                 <div class="field">
@@ -63,6 +63,15 @@
                     <span class="field-error" data-error-for="password"></span>
                 </div>
                 <button class="btn btn-primary btn-block" type="submit" id="login-submit">Entrar al panel</button>
+            </form>
+            <form id="two-factor-form" class="stack" novalidate hidden>
+                <div class="field">
+                    <label for="login-code">Código de verificación</label>
+                    <input class="input" id="login-code" name="code" type="text" autocomplete="one-time-code" maxlength="20" placeholder="123456 o código de recuperación" required>
+                    <span class="field-error" data-error-for="code"></span>
+                </div>
+                <button class="btn btn-primary btn-block" type="submit" id="two-factor-submit">Verificar y entrar</button>
+                <button class="btn btn-ghost btn-block" type="button" id="two-factor-back">Volver al inicio de sesión</button>
             </form>
             <p class="auth-foot small muted"><a href="../">← Volver al menú público</a></p>
         </div>
