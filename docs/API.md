@@ -72,6 +72,22 @@ La sesión se guarda en la cookie `appmenu_session` (`HttpOnly`, `SameSite=Lax`,
 
    La respuesta incluye `user`, `csrf_token` renovado y `must_change_password`.
 
+   Si la cuenta tiene activa la verificación en dos pasos, `auth/login` todavía no
+   crea la sesión: devuelve `two_factor_required: true`, `expires_in` y un
+   `csrf_token` para completar el reto:
+
+   ```http
+   POST /api/v1/auth/login/2fa
+   Content-Type: application/json
+   X-CSRF-Token: …
+
+   { "code": "123456" }
+   ```
+
+   El `code` puede ser un TOTP de 6 dígitos o un código de recuperación. El reto
+   caduca a los 5 minutos y admite 5 intentos por IP + usuario cada 15 minutos.
+   Al completarlo se devuelve el mismo payload que un login normal.
+
 4. Si `must_change_password` es `true`, cambia la contraseña antes de usar el panel:
 
    ```http
@@ -99,6 +115,8 @@ y `auth/me` hasta completar el cambio.
 | --- | --- |
 | API pública por IP | 120 peticiones/minuto |
 | Login por IP + correo | 5 intentos / 15 minutos |
+| Reto 2FA por IP + usuario | 5 intentos / 15 minutos |
+| Activación/gestión de 2FA por IP + usuario | 10 intentos / 15 minutos |
 | Reservas por IP | 3 por hora |
 
 Al superarlos se responde `429 RATE_LIMITED`.
@@ -106,7 +124,7 @@ Al superarlos se responde `429 RATE_LIMITED`.
 ### Roles
 
 - `editor`: resumen, reservas, categorías, productos, imágenes y QR.
-- `admin`: todo lo anterior más configuración, usuarios y auditoría.
+- `admin`: todo lo anterior más configuración, seguridad (2FA), usuarios y auditoría.
 
 Las rutas marcadas como **admin** responden `403 FORBIDDEN` a un editor.
 
@@ -249,9 +267,33 @@ Evalúa el horario en la zona horaria del restaurante y devuelve:
 | Método | Ruta | Acceso | Descripción |
 | --- | --- | --- | --- |
 | POST | `/auth/login` | público + CSRF | Inicia sesión. |
+| POST | `/auth/login/2fa` | reto pendiente + CSRF | Completa el reto TOTP o de recuperación. |
 | POST | `/auth/logout` | sesión + CSRF | Cierra sesión. |
 | GET | `/auth/me` | sesión | Usuario, CSRF y `must_change_password`. |
 | POST | `/auth/change-password` | sesión + CSRF | Cambia la contraseña propia. |
+| GET | `/auth/2fa` | admin | Estado de 2FA y códigos restantes. |
+| POST | `/auth/2fa/setup` | admin + CSRF | Genera secreto, URI y QR para configurar. |
+| POST | `/auth/2fa/enable` | admin + CSRF | Confirma el código y activa 2FA. |
+| POST | `/auth/2fa/disable` | admin + CSRF | Desactiva 2FA con contraseña y código. |
+| POST | `/auth/2fa/recovery-codes` | admin + CSRF | Regenera los códigos de recuperación. |
+
+### Verificación en dos pasos (TOTP)
+
+Solo para cuentas **admin**. El secreto se guarda cifrado con AES-256-GCM usando
+`APP_KEY`; los códigos de recuperación se almacenan como hashes bcrypt y son de un
+solo uso. Si `APP_KEY` no está configurada, `GET /auth/2fa` devuelve
+`available: false` y la activación responde `503 TWO_FACTOR_UNAVAILABLE`.
+
+Flujo de activación:
+
+1. `POST /auth/2fa/setup` devuelve `secret`, `otpauth_uri`, `qr_data_uri`
+   (imagen SVG en `data:`) y `expires_in` (10 minutos).
+2. Escanea el QR en Google Authenticator, Authy, 1Password o similar.
+3. `POST /auth/2fa/enable` con `{ "code": "123456" }`. La respuesta incluye
+   `recovery_codes` (8 códigos de un solo uso); muéstralos una única vez.
+
+Desactivar o regenerar códigos exige `{ "password": "…", "code": "123456" }`; el
+`code` también puede ser un código de recuperación.
 
 ## Panel: resumen
 
@@ -490,6 +532,11 @@ Crear usuario:
 | `INVALID_JSON` | 400 | Cuerpo JSON mal formado. |
 | `UNAUTHENTICATED` | 401 | Falta sesión o expiró. |
 | `INVALID_CREDENTIALS` | 401 | Correo o contraseña incorrectos. |
+| `TWO_FACTOR_NOT_STARTED` / `TWO_FACTOR_EXPIRED` | 401 | El reto 2FA expiró; vuelve a iniciar sesión. |
+| `INVALID_2FA_CODE` | 401 / 422 | Código TOTP o de recuperación inválido. |
+| `TWO_FACTOR_ALREADY_ENABLED` / `TWO_FACTOR_NOT_ENABLED` | 409 | Estado de 2FA incompatible con la acción. |
+| `TWO_FACTOR_SETUP_EXPIRED` | 422 | El QR de configuración caducó; genera uno nuevo. |
+| `TWO_FACTOR_UNAVAILABLE` | 503 | Falta `APP_KEY` para cifrar el secreto. |
 | `FORBIDDEN` | 403 | Rol sin permisos. |
 | `PASSWORD_CHANGE_REQUIRED` | 403 | La contraseña temporal debe cambiarse antes de usar el panel. |
 | `NOT_FOUND` | 404 | Recurso inexistente. |

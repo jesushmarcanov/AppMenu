@@ -73,6 +73,7 @@ const NAV = [
         adminOnly: true,
         items: [
             { key: 'settings', label: 'Configuración', icon: 'settings', subtitle: 'Negocio, moneda, horarios y reservas' },
+            { key: 'security', label: 'Seguridad', icon: 'lock', subtitle: 'Verificación en dos pasos' },
             { key: 'users', label: 'Usuarios', icon: 'users', subtitle: 'Equipo, roles y acceso' },
             { key: 'audit', label: 'Auditoría', icon: 'shield', subtitle: 'Registro de actividad del panel' },
         ],
@@ -80,7 +81,7 @@ const NAV = [
 ];
 
 const NAV_ITEMS = NAV.flatMap((group) => group.items);
-const ADMIN_ONLY = new Set(['settings', 'users', 'audit']);
+const ADMIN_ONLY = new Set(['settings', 'security', 'users', 'audit']);
 
 const VIEWS = {
     dashboard: renderDashboardView,
@@ -89,6 +90,7 @@ const VIEWS = {
     reservations: renderReservationsView,
     qr: renderQrView,
     settings: renderSettingsView,
+    security: renderSecurityView,
     users: renderUsersView,
     audit: renderAuditView,
 };
@@ -110,6 +112,13 @@ const AUDIT_ACTIONS = {
     'auth.logout': ['Cerró sesión', ''],
     'auth.login_failed': ['Intento de acceso fallido', 'danger'],
     'auth.password_changed': ['Cambió su contraseña', 'success'],
+    'auth.2fa_challenge': ['Solicitó verificación en dos pasos', ''],
+    'auth.2fa_failed': ['Código de verificación fallido', 'danger'],
+    'auth.2fa_recovery_used': ['Usó un código de recuperación', ''],
+    'auth.2fa_enabled': ['Activó la verificación en dos pasos', 'success'],
+    'auth.2fa_disabled': ['Desactivó la verificación en dos pasos', 'danger'],
+    'auth.2fa_setup_failed': ['Falló la activación de 2FA', 'danger'],
+    'auth.2fa_recovery_regenerated': ['Regeneró códigos de recuperación', ''],
     'category.created': ['Creó una categoría', 'success'],
     'category.updated': ['Actualizó una categoría', ''],
     'category.deleted': ['Eliminó una categoría', 'danger'],
@@ -297,21 +306,60 @@ function hideScreens() {
     });
 }
 
+function setLoginMode(twoFactor) {
+    const loginForm = qs('#login-form');
+    const otpForm = qs('#two-factor-form');
+    const eyebrow = qs('#login-eyebrow');
+    const title = qs('#login-title');
+    const intro = qs('#login-intro');
+
+    if (loginForm) loginForm.hidden = twoFactor;
+    if (otpForm) otpForm.hidden = !twoFactor;
+
+    if (eyebrow) eyebrow.textContent = twoFactor ? 'Seguridad' : 'Administración';
+    if (title) title.textContent = twoFactor ? 'Verificación en dos pasos' : 'Inicia sesión';
+    if (intro) {
+        intro.textContent = twoFactor
+            ? 'Introduce el código de 6 dígitos de tu aplicación autenticadora o uno de tus códigos de recuperación.'
+            : 'Gestiona la carta, las reservas y la configuración de tu restaurante.';
+    }
+}
+
 function showLogin() {
     hideScreens();
     const screen = qs('#login-root');
     if (screen) screen.hidden = false;
 
-    const loginForm = qs('#login-form');
-    if (loginForm) {
-        clearFieldErrors(loginForm);
-    }
+    setLoginMode(false);
 
-    const password = qs('#login-password');
-    if (password) password.value = '';
+    ['#login-form', '#two-factor-form'].forEach((selector) => {
+        const form = qs(selector);
+        if (!form) return;
+        clearFieldErrors(form);
+        qsa('input', form).forEach((input) => {
+            if (input.name !== 'email') input.value = '';
+        });
+    });
 
     document.title = 'Acceso · Panel · AppMenu';
     window.setTimeout(() => qs('#login-email')?.focus({ preventScroll: true }), 60);
+}
+
+function showTwoFactorChallenge() {
+    hideScreens();
+    const screen = qs('#login-root');
+    if (screen) screen.hidden = false;
+
+    setLoginMode(true);
+
+    const form = qs('#two-factor-form');
+    if (form) {
+        form.reset();
+        clearFieldErrors(form);
+    }
+
+    document.title = 'Verificación · Panel · AppMenu';
+    window.setTimeout(() => qs('#login-code')?.focus({ preventScroll: true }), 60);
 }
 
 function showPassword(forced = true) {
@@ -633,6 +681,13 @@ function bindStaticEvents() {
             });
 
             api.setCsrf(data.csrf_token);
+
+            if (data.two_factor_required) {
+                showTwoFactorChallenge();
+                toast('Introduce el código de tu aplicación autenticadora.', 'info', 4000);
+                return;
+            }
+
             state.user = data.user;
             applyUser();
 
@@ -654,6 +709,51 @@ function bindStaticEvents() {
             setButtonBusy(submit, false);
         }
     });
+
+    qs('#two-factor-form')?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        const form = event.currentTarget;
+        if (!form.reportValidity()) return;
+
+        clearFieldErrors(form);
+        const submit = qs('#two-factor-submit');
+        setButtonBusy(submit, true, 'Verificando…');
+
+        try {
+            const data = await api.post('auth/login/2fa', {
+                code: fieldValue(form, 'code'),
+            });
+
+            api.setCsrf(data.csrf_token);
+            state.user = data.user;
+            applyUser();
+
+            if (data.must_change_password) {
+                showPassword(true);
+            } else {
+                showShell();
+                toast(`Bienvenido, ${firstName(state.user.name)}.`, 'success', 3000);
+            }
+        } catch (error) {
+            if (error instanceof ApiError) {
+                if (error.code === 'TWO_FACTOR_NOT_STARTED' || error.code === 'TWO_FACTOR_EXPIRED') {
+                    showLogin();
+                    toast(error.message, 'error');
+                    return;
+                }
+
+                clearFieldErrors(form);
+                applyFieldErrors(form, error.fields);
+                toast(error.message, 'error');
+            } else {
+                toast('No pudimos conectar con el servidor. Revisa tu conexión.', 'error');
+            }
+        } finally {
+            setButtonBusy(submit, false);
+        }
+    });
+
+    qs('#two-factor-back')?.addEventListener('click', () => showLogin());
 
     qs('#password-form')?.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -2969,6 +3069,317 @@ async function renderUsersView(token) {
     });
 
     refreshUserRows(usersCache);
+}
+
+async function copyToClipboard(text, message = 'Copiado al portapapeles.') {
+    try {
+        await navigator.clipboard.writeText(text);
+        toast(message, 'success');
+        return;
+    } catch {
+        /* Fallback para navegadores sin permisos de portapapeles. */
+    }
+
+    const input = document.createElement('textarea');
+    input.value = text;
+    input.setAttribute('readonly', '');
+    input.style.position = 'fixed';
+    input.style.opacity = '0';
+    document.body.append(input);
+    input.select();
+    const copied = document.execCommand('copy');
+    input.remove();
+    toast(copied ? message : 'No pudimos copiar al portapapeles.', copied ? 'success' : 'error');
+}
+
+/* ---------------------------------------------------------------- seguridad */
+
+async function renderSecurityView(token) {
+    const status = await guardRequest(api.get('auth/2fa'), token);
+    if (!isCurrent(token)) return;
+
+    if (!status) {
+        view.innerHTML = failurePanel('No pudimos cargar la configuración de seguridad.');
+        bindRetry();
+        return;
+    }
+
+    const enabled = Boolean(status.enabled);
+    const available = status.available !== false;
+    const remaining = Number(status.recovery_codes_remaining || 0);
+
+    view.innerHTML = `
+        <div class="page-actions">
+            <p>Protege el acceso al panel con un segundo factor. Recomendado para todas las cuentas administradoras.</p>
+        </div>
+
+        <div class="security-layout">
+            <section class="panel">
+                <div class="panel-head">
+                    <div>
+                        <h2>Verificación en dos pasos</h2>
+                        <span class="small">TOTP · Google Authenticator, Authy o 1Password</span>
+                    </div>
+                    <span class="badge ${enabled ? 'badge-success' : 'badge-muted'}">${enabled ? 'Activa' : 'Inactiva'}</span>
+                </div>
+                <div class="panel-body security-body">
+                    <div class="security-hero">
+                        <span class="security-icon">${icon('shield', 26)}</span>
+                        <div>
+                            <h3>${enabled ? 'Tu cuenta está protegida' : 'Añade una capa extra de seguridad'}</h3>
+                            <p class="muted">${enabled
+                                ? 'Además de tu contraseña, el panel pedirá un código temporal de tu aplicación autenticadora.'
+                                : 'Al activarla, cada inicio de sesión pedirá un código de 6 dígitos generado en tu teléfono.'}</p>
+                        </div>
+                    </div>
+
+                    ${!available ? `
+                        <div class="qr-note qr-note-warning">
+                            ${icon('alert', 15)}
+                            <span>La verificación en dos pasos no está disponible: falta configurar <strong>APP_KEY</strong> en el servidor.</span>
+                        </div>
+                    ` : ''}
+
+                    ${enabled ? `
+                        <div class="detail-grid">
+                            <div class="detail-item"><span>Activada</span><strong>${escapeHtml(formatDateTime(status.enabled_at))}</strong></div>
+                            <div class="detail-item"><span>Códigos de recuperación</span><strong>${remaining} de 8 disponibles</strong></div>
+                        </div>
+
+                        ${remaining <= 2 ? `
+                            <div class="qr-note qr-note-warning">
+                                ${icon('alert', 15)}
+                                <span>Te quedan pocos códigos de recuperación. Regenera un lote nuevo y guárdalo en un lugar seguro.</span>
+                            </div>
+                        ` : ''}
+
+                        <div class="security-actions">
+                            <button class="btn btn-outline" type="button" data-regenerate>${icon('refresh', 15)} Regenerar códigos</button>
+                            <button class="btn btn-danger" type="button" data-disable>${icon('lock', 15)} Desactivar</button>
+                        </div>
+                    ` : `
+                        <div class="security-actions">
+                            <button class="btn btn-primary" type="button" data-enable ${available ? '' : 'disabled'}>${icon('shield', 15)} Activar verificación en dos pasos</button>
+                        </div>
+                    `}
+                </div>
+            </section>
+
+            <section class="panel">
+                <div class="panel-head">
+                    <div><h2>Recomendaciones</h2><span class="small">Buenas prácticas de acceso</span></div>
+                </div>
+                <div class="panel-body security-tips">
+                    <ul>
+                        <li>Guarda los códigos de recuperación en un lugar seguro y sin conexión.</li>
+                        <li>No compartas el código QR ni el secreto con nadie.</li>
+                        <li>Verifica que la hora del servidor y la del teléfono estén sincronizadas.</li>
+                        <li>Si pierdes el teléfono, usa un código de recuperación para entrar y desactivar el segundo factor.</li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    `;
+
+    qs('[data-enable]')?.addEventListener('click', startTwoFactorSetup);
+    qs('[data-disable]')?.addEventListener('click', openTwoFactorDisableModal);
+    qs('[data-regenerate]')?.addEventListener('click', openTwoFactorRecoveryModal);
+}
+
+async function startTwoFactorSetup() {
+    const setup = await perform(() => api.post('auth/2fa/setup', {}));
+    if (!setup.ok || !setup.result) return;
+
+    const data = setup.result;
+
+    const modal = openModal({
+        title: 'Activar verificación en dos pasos',
+        size: 'lg',
+        body: `
+            <div class="two-factor-setup">
+                <ol class="setup-steps">
+                    <li>Abre tu aplicación autenticadora y escanea el código QR.</li>
+                    <li>Si no puedes escanearlo, introduce el secreto manualmente.</li>
+                    <li>Escribe el código de 6 dígitos que muestra la aplicación.</li>
+                </ol>
+
+                <div class="qr-frame">
+                    <img src="${escapeHtml(data.qr_data_uri)}" alt="Código QR para configurar la verificación en dos pasos" width="220" height="220">
+                </div>
+
+                <div class="secret-box">
+                    <span class="field-label">Secreto manual</span>
+                    <code id="two-factor-secret">${escapeHtml(data.secret)}</code>
+                    <button class="btn btn-ghost btn-sm" type="button" data-copy-secret>${icon('copy', 14)} Copiar</button>
+                </div>
+
+                <form id="two-factor-enable-form" class="modal-form" novalidate>
+                    <div class="field">
+                        <label for="enable-code">Código de verificación</label>
+                        <input class="input input-otp" id="enable-code" name="code" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="000000" required>
+                        <span class="field-error" data-error-for="code"></span>
+                    </div>
+                </form>
+            </div>
+        `,
+        footer: `
+            <button class="btn btn-ghost" type="button" data-cancel>Cancelar</button>
+            <button class="btn btn-primary" type="submit" form="two-factor-enable-form" data-confirm>${icon('check', 15)} Activar</button>
+        `,
+    });
+
+    modal.layer.querySelector('[data-cancel]')?.addEventListener('click', modal.close);
+    modal.layer.querySelector('[data-copy-secret]')?.addEventListener('click', () => {
+        copyToClipboard(String(data.secret || ''), 'Secreto copiado.');
+    });
+
+    const form = modal.layer.querySelector('#two-factor-enable-form');
+    const confirm = modal.layer.querySelector('[data-confirm]');
+
+    form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        clearFieldErrors(form);
+        setButtonBusy(confirm, true, 'Activando…');
+
+        const outcome = await perform(
+            () => api.post('auth/2fa/enable', { code: fieldValue(form, 'code') }),
+            { form },
+        );
+        setButtonBusy(confirm, false);
+
+        if (!outcome.ok) return;
+
+        modal.close();
+        toast('Verificación en dos pasos activada.', 'success');
+        openRecoveryCodesModal(outcome.result?.recovery_codes || []);
+        renderRoute('security');
+    });
+}
+
+function openRecoveryCodesModal(codes = []) {
+    const list = Array.isArray(codes) ? codes.filter(Boolean) : [];
+
+    const modal = openModal({
+        title: 'Códigos de recuperación',
+        body: `
+            <div class="recovery-codes">
+                <p class="muted">Guarda estos códigos en un lugar seguro. Cada uno se puede usar <strong>una sola vez</strong> si pierdes acceso a tu aplicación autenticadora.</p>
+                ${list.length ? `
+                    <ol class="recovery-grid">
+                        ${list.map((code) => `<li><code>${escapeHtml(code)}</code></li>`).join('')}
+                    </ol>
+                ` : '<p class="muted">No se recibieron códigos. Regenera un lote desde esta sección.</p>'}
+                <div class="qr-note qr-note-warning">
+                    ${icon('alert', 15)}
+                    <span>No podrás volver a verlos. Si los pierdes, regenera un lote nuevo.</span>
+                </div>
+            </div>
+        `,
+        footer: `
+            <button class="btn btn-ghost" type="button" data-copy-all ${list.length ? '' : 'disabled'}>${icon('copy', 15)} Copiar todos</button>
+            <button class="btn btn-primary" type="button" data-done>${icon('check', 15)} He guardado mis códigos</button>
+        `,
+    });
+
+    modal.layer.querySelector('[data-copy-all]')?.addEventListener('click', () => {
+        copyToClipboard(list.join('\n'), 'Códigos copiados.');
+    });
+    modal.layer.querySelector('[data-done]')?.addEventListener('click', modal.close);
+}
+
+function openTwoFactorDisableModal() {
+    const modal = openModal({
+        title: 'Desactivar verificación en dos pasos',
+        body: `
+            <p class="muted">Para desactivarla, confirma tu contraseña actual y un código de tu aplicación autenticadora o un código de recuperación.</p>
+            <form id="two-factor-disable-form" class="modal-form" novalidate>
+                ${field('password', { label: 'Contraseña actual', type: 'password', required: true })}
+                <div class="field">
+                    <label for="disable-code">Código de verificación</label>
+                    <input class="input" id="disable-code" name="code" type="text" autocomplete="one-time-code" maxlength="20" placeholder="123456 o código de recuperación" required>
+                    <span class="field-error" data-error-for="code"></span>
+                </div>
+            </form>
+        `,
+        footer: `
+            <button class="btn btn-ghost" type="button" data-cancel>Cancelar</button>
+            <button class="btn btn-danger" type="submit" form="two-factor-disable-form" data-confirm>${icon('lock', 15)} Desactivar</button>
+        `,
+    });
+
+    modal.layer.querySelector('[data-cancel]')?.addEventListener('click', modal.close);
+
+    const form = modal.layer.querySelector('#two-factor-disable-form');
+    const confirm = modal.layer.querySelector('[data-confirm]');
+
+    form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        clearFieldErrors(form);
+        setButtonBusy(confirm, true, 'Desactivando…');
+
+        const outcome = await perform(
+            () => api.post('auth/2fa/disable', {
+                password: fieldValue(form, 'password'),
+                code: fieldValue(form, 'code'),
+            }),
+            { form },
+        );
+        setButtonBusy(confirm, false);
+
+        if (!outcome.ok) return;
+
+        modal.close();
+        toast('Verificación en dos pasos desactivada.', 'success');
+        renderRoute('security');
+    });
+}
+
+function openTwoFactorRecoveryModal() {
+    const modal = openModal({
+        title: 'Regenerar códigos de recuperación',
+        body: `
+            <p class="muted">Los códigos actuales dejarán de funcionar. Confirma tu contraseña y un código de tu aplicación autenticadora para generar un lote nuevo.</p>
+            <form id="two-factor-recovery-form" class="modal-form" novalidate>
+                ${field('password', { label: 'Contraseña actual', type: 'password', required: true })}
+                <div class="field">
+                    <label for="recovery-code">Código de verificación</label>
+                    <input class="input" id="recovery-code" name="code" type="text" autocomplete="one-time-code" maxlength="20" placeholder="123456 o código de recuperación" required>
+                    <span class="field-error" data-error-for="code"></span>
+                </div>
+            </form>
+        `,
+        footer: `
+            <button class="btn btn-ghost" type="button" data-cancel>Cancelar</button>
+            <button class="btn btn-primary" type="submit" form="two-factor-recovery-form" data-confirm>${icon('refresh', 15)} Regenerar</button>
+        `,
+    });
+
+    modal.layer.querySelector('[data-cancel]')?.addEventListener('click', modal.close);
+
+    const form = modal.layer.querySelector('#two-factor-recovery-form');
+    const confirm = modal.layer.querySelector('[data-confirm]');
+
+    form?.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        clearFieldErrors(form);
+        setButtonBusy(confirm, true, 'Regenerando…');
+
+        const outcome = await perform(
+            () => api.post('auth/2fa/recovery-codes', {
+                password: fieldValue(form, 'password'),
+                code: fieldValue(form, 'code'),
+            }),
+            { form },
+        );
+        setButtonBusy(confirm, false);
+
+        if (!outcome.ok) return;
+
+        modal.close();
+        toast('Códigos de recuperación regenerados.', 'success');
+        openRecoveryCodesModal(outcome.result?.recovery_codes || []);
+        renderRoute('security');
+    });
 }
 
 /* ---------------------------------------------------------------- auditoría */

@@ -48,6 +48,9 @@ Cuentas del panel.
 | `name` | VARCHAR(120) | Nombre visible. |
 | `email` | VARCHAR(190) ÚNICO | Se normaliza a minúsculas. |
 | `password_hash` | VARCHAR(255) | Bcrypt vía `password_hash`. |
+| `two_factor_secret` | TEXT NULL | Secreto TOTP cifrado con AES-256-GCM (`APP_KEY`). |
+| `two_factor_enabled_at` | DATETIME NULL | Fecha de activación; `NULL` = 2FA inactiva. |
+| `two_factor_recovery_codes` | TEXT NULL | JSON con hashes bcrypt de códigos de un solo uso. |
 | `role` | ENUM(`admin`,`editor`) | Permisos. |
 | `is_active` | TINYINT(1) | `0` impide iniciar sesión. |
 | `must_change_password` | TINYINT(1) | Fuerza el cambio inicial. |
@@ -212,7 +215,8 @@ Control interno de `database/migrate.php`: nombre del archivo y fecha de aplicac
 `database/seed.php` crea, si no existen:
 
 - Administrador `admin@restaurante.local` con contraseña temporal `Admin123!` y
-  `must_change_password = 1`.
+  `must_change_password = 1`. La verificación en dos pasos se activa desde el panel
+  en **Sistema → Seguridad**.
 - Cuatro categorías: Entradas, Platos fuertes, Postres y Bebidas.
 - Dieciséis productos bilingües, con precios, emojis, unidades y un producto agotado
   (`tarta-de-chocolate`).

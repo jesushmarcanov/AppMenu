@@ -13,6 +13,7 @@ use App\Controllers\Api\V1\ProductController;
 use App\Controllers\Api\V1\QrController;
 use App\Controllers\Api\V1\ReservationController;
 use App\Controllers\Api\V1\SettingsController;
+use App\Controllers\Api\V1\TwoFactorController;
 use App\Controllers\Api\V1\UserController;
 
 /**
@@ -33,9 +34,17 @@ return [
 
     // Autenticación
     ['POST', '/api/v1/auth/login', [AuthController::class, 'login'], ['csrf']],
+    ['POST', '/api/v1/auth/login/2fa', [AuthController::class, 'twoFactor'], ['csrf']],
     ['POST', '/api/v1/auth/logout', [AuthController::class, 'logout'], ['auth', 'csrf']],
     ['GET', '/api/v1/auth/me', [AuthController::class, 'me'], ['auth']],
     ['POST', '/api/v1/auth/change-password', [AuthController::class, 'changePassword'], ['auth', 'csrf']],
+
+    // Verificación en dos pasos (TOTP, solo administradores)
+    ['GET', '/api/v1/auth/2fa', [TwoFactorController::class, 'status'], ['auth', 'admin']],
+    ['POST', '/api/v1/auth/2fa/setup', [TwoFactorController::class, 'setup'], ['auth', 'admin', 'csrf']],
+    ['POST', '/api/v1/auth/2fa/enable', [TwoFactorController::class, 'enable'], ['auth', 'admin', 'csrf']],
+    ['POST', '/api/v1/auth/2fa/disable', [TwoFactorController::class, 'disable'], ['auth', 'admin', 'csrf']],
+    ['POST', '/api/v1/auth/2fa/recovery-codes', [TwoFactorController::class, 'recoveryCodes'], ['auth', 'admin', 'csrf']],
 
     // Panel: dashboard
     ['GET', '/api/v1/admin/dashboard', [DashboardController::class, 'index'], ['auth', 'editor']],

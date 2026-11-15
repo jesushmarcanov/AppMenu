@@ -54,6 +54,8 @@ APP_DEBUG=false
 APP_URL=https://menu.mirestaurante.com
 APP_BASE_PATH=
 APP_TIMEZONE=America/Caracas
+# Obligatoria para la verificación en dos pasos (cifra el secreto TOTP).
+APP_KEY=base64:…
 SESSION_LIFETIME=7200
 UPLOAD_MAX_MB=5
 
@@ -74,6 +76,15 @@ Notas:
   `/` y no se detecta automáticamente (por ejemplo `/menu`).
 - `APP_DEBUG=false` evita filtrar trazas internas; los errores se registran en
   `storage/logs/`.
+- `APP_KEY` cifra secretos en reposo (secreto TOTP de 2FA). Genera una clave única
+  por instalación y no la cambies una vez activada la verificación en dos pasos:
+
+  ```bash
+  php -r "echo 'base64:'.base64_encode(random_bytes(32)), PHP_EOL;"
+  ```
+
+  Si la clave cambia o se pierde, los secretos TOTP existentes no podrán descifrarse
+  y los administradores deberán desactivar y volver a activar 2FA.
 - Guarda `.env` con permisos `600` y fuera del control de versiones.
 
 ## 4. Base de datos
@@ -91,6 +102,9 @@ FLUSH PRIVILEGES;
 php database/migrate.php
 php database/seed.php          # opcional: solo para una instalación nueva
 ```
+
+`php database/migrate.php` aplica también `002_two_factor.sql`, que añade las
+columnas de verificación en dos pasos a `users`.
 
 Tras el primer acceso, cambia la contraseña del administrador. Para producción
 considera no ejecutar el seed demo y crear el usuario desde el panel o con SQL.

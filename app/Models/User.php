@@ -6,6 +6,7 @@ namespace App\Models;
 
 use App\Core\Database;
 use App\Core\Model;
+use App\Services\TwoFactor;
 
 final class User extends Model
 {
@@ -49,6 +50,58 @@ final class User extends Model
             'must_change_password' => 0,
             'updated_at' => now(),
         ]);
+    }
+
+    public static function enableTwoFactor(int $id, string $encryptedSecret, string $recoveryCodesJson): void
+    {
+        self::update($id, [
+            'two_factor_secret' => $encryptedSecret,
+            'two_factor_enabled_at' => now(),
+            'two_factor_recovery_codes' => $recoveryCodesJson,
+            'updated_at' => now(),
+        ]);
+    }
+
+    public static function disableTwoFactor(int $id): void
+    {
+        self::update($id, [
+            'two_factor_secret' => null,
+            'two_factor_enabled_at' => null,
+            'two_factor_recovery_codes' => null,
+            'updated_at' => now(),
+        ]);
+    }
+
+    public static function updateRecoveryCodes(int $id, string $recoveryCodesJson): void
+    {
+        self::update($id, [
+            'two_factor_recovery_codes' => $recoveryCodesJson,
+            'updated_at' => now(),
+        ]);
+    }
+
+    /**
+     * Verifica y consume un código de recuperación. Devuelve true si era válido.
+     */
+    public static function consumeRecoveryCode(int $id, string $code): bool
+    {
+        $user = self::find($id);
+        if ($user === null) {
+            return false;
+        }
+
+        $json = (string) ($user['two_factor_recovery_codes'] ?? '');
+        $index = TwoFactor::verifyRecoveryCode($json, $code);
+        if ($index === null) {
+            return false;
+        }
+
+        $hashes = TwoFactor::decodeRecoveryCodes($json);
+        unset($hashes[$index]);
+
+        self::updateRecoveryCodes($id, json_encode(array_values($hashes), JSON_THROW_ON_ERROR));
+
+        return true;
     }
 
     public static function touchLogin(int $id): void
