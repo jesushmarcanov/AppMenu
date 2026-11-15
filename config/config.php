@@ -57,6 +57,12 @@ return [
         'timezone' => $get('APP_TIMEZONE', 'America/Caracas'),
         'session_lifetime' => (int) $get('SESSION_LIFETIME', '7200'),
         'upload_max_mb' => max(1, (int) $get('UPLOAD_MAX_MB', '5')),
+        // Solo se confía en X-Forwarded-For / CF-Connecting-IP si la IP
+        // inmediata está en esta lista (IPs o rangos CIDR separados por coma).
+        'trusted_proxies' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', $get('TRUSTED_PROXIES', '')),
+        ))),
     ],
     'db' => [
         'host' => $get('DB_HOST', '127.0.0.1'),

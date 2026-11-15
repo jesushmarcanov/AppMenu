@@ -190,29 +190,106 @@ if (!function_exists('slugify')) {
     }
 }
 
+if (!function_exists('ip_in_range')) {
+    /**
+     * Comprueba si una IP coincide con una IP exacta o con un rango CIDR.
+     */
+    function ip_in_range(string $ip, string $range): bool
+    {
+        if (!str_contains($range, '/')) {
+            return $ip === $range;
+        }
+
+        [$subnet, $bits] = explode('/', $range, 2);
+        $bits = (int) $bits;
+
+        $ipBin = @inet_pton($ip);
+        $subnetBin = @inet_pton($subnet);
+
+        if ($ipBin === false || $subnetBin === false || strlen($ipBin) !== strlen($subnetBin)) {
+            return false;
+        }
+
+        $maxBits = strlen($ipBin) * 8;
+        if ($bits < 0 || $bits > $maxBits) {
+            return false;
+        }
+
+        $wholeBytes = intdiv($bits, 8);
+        if ($wholeBytes > 0 && substr($ipBin, 0, $wholeBytes) !== substr($subnetBin, 0, $wholeBytes)) {
+            return false;
+        }
+
+        $remainingBits = $bits % 8;
+        if ($remainingBits === 0) {
+            return true;
+        }
+
+        $mask = (0xFF << (8 - $remainingBits)) & 0xFF;
+
+        return (ord($ipBin[$wholeBytes]) & $mask) === (ord($subnetBin[$wholeBytes]) & $mask);
+    }
+}
+
+if (!function_exists('trusted_proxies')) {
+    /** @return array<int, string> */
+    function trusted_proxies(): array
+    {
+        $configured = Config::get('app.trusted_proxies', []);
+
+        return is_array($configured) ? array_values(array_filter($configured, 'is_string')) : [];
+    }
+}
+
 if (!function_exists('client_ip')) {
+    /**
+     * Devuelve la IP del cliente sin confiar en cabeceras falsificables.
+     * X-Forwarded-For y CF-Connecting-IP solo se leen cuando REMOTE_ADDR
+     * pertenece a un proxy declarado en TRUSTED_PROXIES.
+     */
     function client_ip(): string
     {
-        $candidates = [
-            $_SERVER['HTTP_CF_CONNECTING_IP'] ?? null,
-            $_SERVER['HTTP_X_FORWARDED_FOR'] ?? null,
-            $_SERVER['REMOTE_ADDR'] ?? null,
-        ];
+        $remote = $_SERVER['REMOTE_ADDR'] ?? '';
+        $remote = is_string($remote) && filter_var($remote, FILTER_VALIDATE_IP) ? $remote : '0.0.0.0';
 
-        foreach ($candidates as $candidate) {
+        $trusted = trusted_proxies();
+        $isTrusted = false;
+        foreach ($trusted as $proxy) {
+            if (ip_in_range($remote, $proxy)) {
+                $isTrusted = true;
+                break;
+            }
+        }
+
+        if (!$isTrusted) {
+            return $remote;
+        }
+
+        foreach (['HTTP_CF_CONNECTING_IP', 'HTTP_X_FORWARDED_FOR'] as $header) {
+            $candidate = $_SERVER[$header] ?? null;
             if (!is_string($candidate) || trim($candidate) === '') {
                 continue;
             }
 
-            foreach (explode(',', $candidate) as $ip) {
+            // De derecha a izquierda: el valor más cercano al proxy de
+            // confianza es el único que no puede haber falsificado el cliente.
+            foreach (array_reverse(explode(',', $candidate)) as $ip) {
                 $ip = trim($ip);
-                if (filter_var($ip, FILTER_VALIDATE_IP)) {
-                    return $ip;
+                if (!filter_var($ip, FILTER_VALIDATE_IP)) {
+                    continue;
                 }
+
+                foreach ($trusted as $proxy) {
+                    if (ip_in_range($ip, $proxy)) {
+                        continue 2;
+                    }
+                }
+
+                return $ip;
             }
         }
 
-        return '0.0.0.0';
+        return $remote;
     }
 }
 
